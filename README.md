@@ -33,6 +33,28 @@ When configured, the DEMO MODE badge disappears and data hits real Postgres.
 
 ---
 
+## Expo SDK & Expo Go compatibility
+
+**This project currently targets Expo SDK 54** (React Native 0.81).
+
+Why: **Expo Go on the Apple App Store stops at SDK 54** — SDK 55 and later are not available there. The Expo team releases a new SDK roughly every 3 months, but each store build of Expo Go supports only the single SDK it was built with, and Apple's review has been lagging (as of mid-2026, SDK 55/56/57 Expo Go builds are only distributed via TestFlight or sideloading from `sign.expo.dev`). To keep the zero-setup "install Expo Go → scan QR" flow working, this project is pinned to SDK 54 — the exact version `create-expo-app` marks "compatible with Expo Go on the Play Store and App Store".
+
+If you see **"Project is incompatible with this version of Expo Go"**:
+
+1. Update Expo Go from the App Store / Play Store.
+2. If it still fails, the project's SDK is ahead of what your store Expo Go supports — you can either downgrade the project (below) or install a newer Expo Go build directly from `sign.expo.dev` in Safari.
+
+Upgrading the project to a newer SDK later (once store Expo Go supports it, or via a development build):
+
+```bash
+npx expo install expo@~56.0.0   # or the latest supported
+npx expo install --fix          # realigns react, react-native, etc.
+```
+
+> Note: Expo Go is a *learning/sandbox* environment — real apps ship with **development builds** (a native binary built via EAS), which don't have this version juggling.
+
+---
+
 ## Technologies used
 
 ### Language
@@ -43,7 +65,7 @@ When configured, the DEMO MODE badge disappears and data hits real Postgres.
 
 - **React** — the UI library. Components are just functions that return JSX; the view re-renders when state changes.
 - **React Native** — renders React components as *native* iOS/Android UI, not a web view. This is why the app feels like a real app on phones.
-- **Expo SDK 57** — the framework on top of React Native that makes development pleasant: one command dev server, QR-code preview on your phone, and later one-command builds for the app stores. It also pins the exact React Native version (0.86) for you.
+- **Expo SDK 54** — the framework on top of React Native that makes development pleasant: one command dev server, QR-code preview on your phone, and later one-command builds for the app stores. It also pins the exact React Native version (0.81) for you.
 - **react-native-web + react-dom** — the magic that lets the *same* React Native components render as a website, so Android + iOS + web all come from this one codebase.
 
 ### Backend (Supabase, hosted)
@@ -91,7 +113,7 @@ Regular React renders HTML (`<div>`, `<p>`). React Native instead renders *real 
 
 ### Expo — the framework around React Native
 
-It handles everything RN leaves awkward: the dev server, QR-code preview on your phone, installing the correct native versions, and later one-command cloud builds for the app stores. Expo 57 pins React Native 0.86 + React 19.2 — you don't juggle version compatibility yourself.
+It handles everything RN leaves awkward: the dev server, QR-code preview on your phone, installing the correct native versions, and later one-command cloud builds for the app stores. Expo 54 pins React Native 0.81 + React 19.1 — you don't juggle version compatibility yourself.
 
 ### react-native-web — one codebase, all three clients
 
@@ -172,3 +194,64 @@ supabase/schema.sql            profiles table + row-level security policies
 scripts/demo-test/             logic tests + Node stubs for storage
 runme.sh                       dev-server / test / typecheck shortcuts
 ```
+
+---
+
+## How this measures up to web app standards
+
+### Directory structure
+
+Classic web standard:
+
+```
+src/
+  components/  pages/  lib/
+public/
+package.json
+```
+
+This project maps almost one-to-one, with two React Native–specific differences:
+
+| This project | Web equivalent | Note |
+| --- | --- | --- |
+| `components/`, `lib/`, `scripts/` | same | identical convention |
+| `supabase/` (SQL) | `migrations/` | schema/deploy code, same idea |
+| `assets/` | `public/` | static images/icons |
+| `App.tsx` + `index.ts` at root | `src/` entry files | Expo's toolchain expects root entry; moving to `src/` is optional |
+| `app.json` | webpack/vite config | Expo's project config |
+
+The modern Expo default (expo-router) uses an `app/` directory with file-based routing — the same convention as Next.js's `app/` — so growing toward web standards is a natural step.
+
+### Builds — `package.json` scripts *are* the makefile
+
+For JavaScript web apps, **`npm run ...` scripts are the standardized build interface** — a Makefile is idiomatic for C/Go/Rust, not JS. This project follows the convention:
+
+- `npm run typecheck` — static check
+- `npm test` — logic tests
+- `npx expo start` — dev server
+- `npx expo export --platform web` — **production build** → static files in `dist/`
+
+`runme.sh` is a convenience wrapper around those npm scripts for this container — extra, not the standard.
+
+### Production pipeline
+
+Standard web flow: **source → bundler → static `dist/` → host.** Ours is the same, with **Metro** in the bundler role (our webpack/Vite equivalent). The `dist/` output deploys to any static host (Netlify, Vercel, etc.).
+
+### What becomes "more standard" as the app grows
+
+- Adopt expo-router (`app/` dir, file-based routing) — aligns with Next.js
+- Add `__tests__/` folders alongside components (Jest)
+- Optionally wrap everything in `src/`
+
+---
+
+## Backlog / next steps
+
+- [ ] **Make the email-confirmation flow work properly.** Right now clicking the confirm link in Supabase's email fails with "missing website": the link points at the project's Site URL (a browser URL), but a mobile app has no website. To fix it properly:
+      1. In Supabase dashboard → **Authentication → URL Configuration**, set the **Site URL** (and a **Redirect URL**) to the app's deep link (e.g. `exp://...` for Expo Go, or `exploreai://` for a real build).
+      2. In the app, catch the confirmation token when the app opens from the link and complete verification — with expo-router this means adding a dynamic route (e.g. `auth/callback`) that calls `supabase.auth.verifyOtp({ type: 'email' })` (or the flow Supabase's `detectSessionInUrl` already wires for web).
+      3. Test end-to-end with a fresh signup. Shortcut while learning: keep "Confirm email" disabled in **Authentication → Sign In / Up**.
+- [ ] Turn the app into a real multi-screen app with expo-router (tabs + stack) once there's more than one feature.
+- [ ] Wire a UI test framework (Jest + React Native Testing Library) as screens multiply.
+- [ ] Move the project to a development build (EAS) so SDK upgrades stop being blocked by Expo Go's store availability.
+

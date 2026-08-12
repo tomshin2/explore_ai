@@ -9,6 +9,7 @@ set -e
 #   ./runme.sh typecheck  type-check the code (tsc)
 #   ./runme.sh test       run the demo-mode logic tests
 #   ./runme.sh web        start dev server, open browser
+#   ./runme.sh tunnel     start dev server in tunnel mode (phone anywhere)
 #   ./runme.sh stop       stop a background dev server
 #   ./runme.sh           (no args) install + typecheck + test
 # ============================================================
@@ -34,6 +35,15 @@ case "${1:-}" in
     CI=1 nohup ./node_modules/.bin/expo start --web --port 8081 > /tmp/expo-dev.log 2>&1 &
     echo $! > /tmp/expo-dev.pid
     echo "started pid $!  (logs: /tmp/expo-dev.log, stop with: ./runme.sh stop)"
+    ;;
+
+  tunnel)
+    ./runme.sh stop
+    echo "== starting dev server in tunnel mode (phone can connect from anywhere) =="
+    CI=1 nohup ./node_modules/.bin/expo start --tunnel > /tmp/expo-dev.log 2>&1 &
+    echo $! > /tmp/expo-dev.pid
+    echo "started pid $!  (logs: /tmp/expo-dev.log, stop with: ./runme.sh stop)"
+    echo "scan the QR code with Expo Go once the tunnel URL appears"
     ;;
 
   stop)
