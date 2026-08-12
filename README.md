@@ -69,6 +69,67 @@ When configured, the DEMO MODE badge disappears and data hits real Postgres.
 
 ---
 
+## How it all fits together
+
+The best way to understand these technologies is through the one journey they all serve — a tap on **Save profile** becoming a row in Postgres:
+
+```
+[Phone/Web UI]      ->  [api layer]      ->  [Supabase server]     ->  [Postgres]
+React component         lib/api.ts            REST API (hosted)         profiles table
+  onPress={save}        supabase-js fetch    auth check + RLS          INSERT row
+```
+
+Every technology above is a piece of that arrow.
+
+### React — the engine of the UI
+
+Its whole idea: *your screen is a function of state*. Keep data in variables (`const [name, setName]`), and when state changes, React re-runs the render and updates only the parts of the screen that changed. You never write "update the text label" — you write "here's the screen for this data," and React figures out the diff. That's why the profile screen just calls `setUsername()` and the text updates.
+
+### React Native — React's renderer for phones
+
+Regular React renders HTML (`<div>`, `<p>`). React Native instead renders *real native components* — actual Android `TextView`s and iOS `UILabel`s under the hood, not a browser window inside an app. That's why RN apps feel native (smooth scrolling, real keyboards, real gestures) while being written in the same language as the web.
+
+### Expo — the framework around React Native
+
+It handles everything RN leaves awkward: the dev server, QR-code preview on your phone, installing the correct native versions, and later one-command cloud builds for the app stores. Expo 57 pins React Native 0.86 + React 19.2 — you don't juggle version compatibility yourself.
+
+### react-native-web — one codebase, all three clients
+
+A second renderer for React: when your code runs in a browser, `<View>` becomes a `<div>`, `<Text>` becomes `<p>`. `App.tsx` never knows (or cares) which platform it's on. "Web" isn't a separate app — it's the same component tree, rendered by a different engine.
+
+### TypeScript — the guardrail on all of it
+
+Components receive typed props, `api.upsertProfile` has a typed signature, and `tsc` verifies everything fits together *before* any of it runs. It's the difference between catching a typo'd property at edit time vs. at runtime on a user's phone.
+
+### Supabase — the hosted backend
+
+No custom server code: they host the API for you. Three things bundled:
+- **Postgres** — a battle-tested relational database (the same engine behind huge production apps). Your profile is a row keyed by the user's auth id.
+- **Auth** — password hashing, session tokens, refresh tokens, email confirmation. Building this yourself is where apps leak credentials; Supabase gives you a hardened version out of the box.
+- **REST + Realtime** — the API the app calls. `supabase-js` (the npm client) turns `api.signUp(email, password)` into an HTTPS request.
+
+### Row-level security — why it's safe with a *public* key
+
+The anon key ships inside the app bundle, where anyone can read it. Safety doesn't come from hiding the key — it comes from `supabase/schema.sql`, which makes the *database itself* reject any query that fails the policy (e.g. "you may only update rows where `auth.uid() = id`"). Even if someone extracts the key and writes their own SQL against your project, the database refuses. **The security lives in the database, not in your app.**
+
+### What "no custom backend" means
+
+With Supabase you write zero server code — no Express, no routing, no deployment. `lib/api.ts` is the thinnest possible shim that decides *which* database to talk to (real Supabase or local demo). That single file is effectively your entire backend interface.
+
+### AsyncStorage — local persistence
+
+Supabase hands you a session object after login; AsyncStorage keeps it on the device so you stay logged in across app restarts. On web it maps to `localStorage`; on phones it's native storage. In demo mode it's the *entire* database.
+
+### Metro — the bundler and dev server
+
+Your code is 200+ files of TSX; phones and browsers want one JS file. Metro resolves imports, strips types, transpiles JSX, and serves the result at `localhost:8081` with hot reload in dev.
+
+### Why the "not used" list matters
+
+Nothing above is a framework — no router, no state manager, no UI kit. Each "not used" item solves a scaling problem this app doesn't have yet. When a feed appears, add Expo Router. When chat appears, add a realtime subscription (Supabase `channel`) and likely Zustand. The architecture (`App.tsx → lib/api.ts → database`) is designed so those slot in as leaf additions, not rewrites.
+
+---
+
 ## Deliberately NOT used (yet)
 
 Each of these solves a real problem — but a good rule is to add them *in response to a pain*, not preemptively. The demo proves the whole loop works with none of them, and each slots in later without rework.
