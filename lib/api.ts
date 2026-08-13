@@ -110,6 +110,16 @@ async function demoGetProfile(userId: string): Promise<Profile | null> {
   };
 }
 
+async function demoGetProfiles(): Promise<Profile[]> {
+  const users = await loadUsers();
+  return Object.values(users).map((u) => ({
+    id: u.id,
+    username: u.profile?.username ?? null,
+    full_name: u.profile?.full_name ?? null,
+    updated_at: null,
+  }));
+}
+
 async function demoUpsertProfile(profile: {
   id: string;
   username: string | null;
@@ -178,6 +188,17 @@ export const api = {
       return data as Profile | null;
     }
     return demoGetProfile(userId);
+  },
+
+  async getProfiles(): Promise<Profile[]> {
+    if (supabase) {
+      const { data } = await supabase
+        .from('profiles')
+        .select('id, username, full_name, updated_at')
+        .order('username' as never, { ascending: true } as never);
+      return (data as Profile[]) ?? [];
+    }
+    return demoGetProfiles();
   },
 
   async upsertProfile(profile: {

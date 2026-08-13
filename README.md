@@ -68,6 +68,10 @@ npx expo install --fix          # realigns react, react-native, etc.
 - **Expo SDK 54** — the framework on top of React Native that makes development pleasant: one command dev server, QR-code preview on your phone, and later one-command builds for the app stores. It also pins the exact React Native version (0.81) for you.
 - **react-native-web + react-dom** — the magic that lets the *same* React Native components render as a website, so Android + iOS + web all come from this one codebase.
 
+### Navigation
+
+- **Expo Router** (built on React Navigation) — file-based routing: files in `app/` become routes. A `(group)` folder doesn't appear in the URL but groups screens. Dynamic routes like `member/[id].tsx` match `/member/<uuid>`. `Tabs` and `Stack` navigators are imported directly from `expo-router`. This is the same convention as Next.js's `app/` directory.
+
 ### Backend (Supabase, hosted)
 
 - **Postgres** — the database. One `profiles` table holds every user's profile row.
@@ -156,11 +160,10 @@ Nothing above is a framework — no router, no state manager, no UI kit. Each "n
 
 Each of these solves a real problem — but a good rule is to add them *in response to a pain*, not preemptively. The demo proves the whole loop works with none of them, and each slots in later without rework.
 
-### Navigation library (React Navigation / Expo Router)
+### ~~Navigation library~~ ✅ Now used — Expo Router
 
-**What it does:** manages moving between screens — stacks, tabs, transitions, deep links. Whole UX patterns are built on it.
-**Why not here:** the app has two screens chosen by one `if` statement in `App.tsx`. A library would be pure overhead.
-**When to add:** the moment there's a real hierarchy — a feed that pushes to a detail screen, a tab bar, etc. Expo's default template ships with Expo Router (file-based routing) for exactly this.
+**What it does:** manages moving between screens — stacks, tabs, transitions, deep links.
+**What we adopted:** Expo Router (file-based, built on React Navigation). The app now has a tab bar (Home / Members / Profile) plus a detail stack for viewing other members. Protected routes redirect to sign-in when no session exists, using a shared `AuthProvider` context.
 
 ### State manager (Zustand, Redux, React Context)
 
@@ -185,14 +188,27 @@ Each of these solves a real problem — but a good rule is to add them *in respo
 ## Project structure
 
 ```
-App.tsx                        session gate: AuthScreen vs ProfileScreen
-components/AuthScreen.tsx      sign up / sign in form
-components/ProfileScreen.tsx   read + edit the user's profile row
-lib/supabase.ts                Supabase client (null when unconfigured)
-lib/api.ts                     data layer: real Supabase or local demo fallback
-supabase/schema.sql            profiles table + row-level security policies
-scripts/demo-test/             logic tests + Node stubs for storage
-runme.sh                       dev-server / test / typecheck shortcuts
+app/
+  _layout.tsx                   root: Stack + AuthProvider + demo badge
+  (auth)/
+    _layout.tsx                 redirect to /(app) if already signed in
+    sign-in.tsx                 sign up / sign in form
+  (app)/
+    _layout.tsx                 protected: redirect to /sign-in if no session
+    (tabs)/
+      _layout.tsx              tab bar: Home / Members / Profile
+      index.tsx                Home — welcome card + member count + quick actions
+      members.tsx              Members — list of all profiles from the database
+      profile.tsx              Profile — edit your own name and username
+    member/
+      [id].tsx                 Member detail — view another user's profile
+lib/
+  supabase.ts                  Supabase client (null when unconfigured)
+  api.ts                        data layer: real Supabase or local demo fallback
+  auth-context.tsx              session provider (React Context) shared across routes
+supabase/schema.sql             profiles table + row-level security policies
+scripts/demo-test/              logic tests + Node stubs for storage
+runme.sh                        dev-server / test / typecheck shortcuts
 ```
 
 ---
@@ -251,7 +267,7 @@ Standard web flow: **source → bundler → static `dist/` → host.** Ours is t
       1. In Supabase dashboard → **Authentication → URL Configuration**, set the **Site URL** (and a **Redirect URL**) to the app's deep link (e.g. `exp://...` for Expo Go, or `exploreai://` for a real build).
       2. In the app, catch the confirmation token when the app opens from the link and complete verification — with expo-router this means adding a dynamic route (e.g. `auth/callback`) that calls `supabase.auth.verifyOtp({ type: 'email' })` (or the flow Supabase's `detectSessionInUrl` already wires for web).
       3. Test end-to-end with a fresh signup. Shortcut while learning: keep "Confirm email" disabled in **Authentication → Sign In / Up**.
-- [ ] Turn the app into a real multi-screen app with expo-router (tabs + stack) once there's more than one feature.
+- [x] ~~Turn the app into a real multi-screen app with expo-router (tabs + stack) once there's more than one feature.~~ — Done: Home, Members, Profile tabs + Member detail stack screen.
 - [ ] Wire a UI test framework (Jest + React Native Testing Library) as screens multiply.
 - [ ] Move the project to a development build (EAS) so SDK upgrades stop being blocked by Expo Go's store availability.
 

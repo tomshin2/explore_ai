@@ -10,11 +10,11 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { api } from '../lib/api';
+import { api } from '../../lib/api';
 
 type Mode = 'signIn' | 'signUp';
 
-export default function AuthScreen() {
+export default function SignInScreen() {
   const [mode, setMode] = useState<Mode>('signUp');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -56,6 +56,7 @@ export default function AuthScreen() {
         <TextInput
           style={styles.input}
           placeholder="Email"
+          placeholderTextColor="#5a6485"
           autoCapitalize="none"
           keyboardType="email-address"
           value={email}
@@ -64,6 +65,7 @@ export default function AuthScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
+          placeholderTextColor="#5a6485"
           secureTextEntry
           value={password}
           onChangeText={setPassword}
@@ -92,28 +94,10 @@ export default function AuthScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0b0f1a',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  card: {
-    backgroundColor: '#151b2b',
-    borderRadius: 16,
-    padding: 24,
-  },
-  title: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    marginBottom: 4,
-  },
-  subtitle: {
-    color: '#8b94ad',
-    fontSize: 15,
-    marginBottom: 24,
-  },
+  container: { flex: 1, backgroundColor: '#0b0f1a', justifyContent: 'center', padding: 24 },
+  card: { backgroundColor: '#151b2b', borderRadius: 16, padding: 24 },
+  title: { color: '#fff', fontSize: 28, fontWeight: '800', marginBottom: 4 },
+  subtitle: { color: '#8b94ad', fontSize: 15, marginBottom: 24 },
   input: {
     backgroundColor: '#1f2739',
     borderRadius: 10,
@@ -122,22 +106,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 12,
   },
-  button: {
-    backgroundColor: '#4f6ef7',
-    borderRadius: 10,
-    padding: 15,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  switchText: {
-    color: '#8b94ad',
-    textAlign: 'center',
-    marginTop: 16,
-    fontSize: 14,
-  },
+  button: { backgroundColor: '#4f6ef7', borderRadius: 10, padding: 15, alignItems: 'center', marginTop: 8 },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  switchText: { color: '#8b94ad', textAlign: 'center', marginTop: 16, fontSize: 14 },
 });
