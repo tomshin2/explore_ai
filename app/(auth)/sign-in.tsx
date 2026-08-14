@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -21,8 +21,10 @@ export default function SignInScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const passwordRef = useRef<TextInput>(null);
 
   async function handleAuth() {
+    if (loading) return;
     if (!email.trim() || password.length < 6) {
       Alert.alert('Check your input', 'Email required and password must be 6+ characters.');
       return;
@@ -61,18 +63,25 @@ export default function SignInScreen() {
           placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           keyboardType="email-address"
-          autoComplete="email"
+          textContentType={mode === 'signUp' ? 'emailAddress' : 'username'}
+          autoComplete={mode === 'signUp' ? 'email' : 'username'}
           value={email}
           onChangeText={setEmail}
+          returnKeyType="next"
+          onSubmitEditing={() => passwordRef.current?.focus()}
         />
         <TextInput
+          ref={passwordRef}
           style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
           placeholder="Password"
           placeholderTextColor={colors.textMuted}
           secureTextEntry
+          textContentType={mode === 'signUp' ? 'newPassword' : 'password'}
           autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
           value={password}
           onChangeText={setPassword}
+          returnKeyType="go"
+          onSubmitEditing={handleAuth}
         />
 
         <AppPressable
