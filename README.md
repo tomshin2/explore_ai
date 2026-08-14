@@ -67,10 +67,14 @@ npx expo install --fix          # realigns react, react-native, etc.
 - **React Native** — renders React components as *native* iOS/Android UI, not a web view. This is why the app feels like a real app on phones.
 - **Expo SDK 54** — the framework on top of React Native that makes development pleasant: one command dev server, QR-code preview on your phone, and later one-command builds for the app stores. It also pins the exact React Native version (0.81) for you.
 - **react-native-web + react-dom** — the magic that lets the *same* React Native components render as a website, so Android + iOS + web all come from this one codebase.
+- **Theme system** — `lib/theme.ts` holds light + dark palettes (iOS system colors) selected by `useColorScheme()`, so the app matches the OS setting. All screens read semantic tokens (`colors.bg`, `colors.card`, `colors.accent`…) via a `ThemeContext` instead of hard-coded hex values.
+- **`Pressable` + `android_ripple`** — `lib/ui.tsx` provides an `AppPressable` that gives instant ripple feedback on Android and opacity feedback on iOS, plus a shared `Avatar` component.
 
 ### Navigation
 
 - **Expo Router** (built on React Navigation) — file-based routing: files in `app/` become routes. A `(group)` folder doesn't appear in the URL but groups screens. Dynamic routes like `member/[id].tsx` match `/member/<uuid>`. `Tabs` and `Stack` navigators are imported directly from `expo-router`. This is the same convention as Next.js's `app/` directory.
+- **Native headers** — each tab is its own native `Stack`, so iOS gets large collapsing titles, the native back-swipe gesture, and the native search bar (Members tab). Push screens (member detail) get a real native back button + edge swipe.
+- **expo-blur** — a `BlurView` gives the iOS tab bar its translucent frosted-glass look (`position: absolute` + `tabBarBackground`). Android uses a solid themed bar.
 
 ### Backend (Supabase, hosted)
 
@@ -189,23 +193,31 @@ Each of these solves a real problem — but a good rule is to add them *in respo
 
 ```
 app/
-  _layout.tsx                   root: Stack + AuthProvider + demo badge
+  _layout.tsx                   root: ThemeProvider + Stack + AuthProvider + demo badge
   (auth)/
     _layout.tsx                 redirect to /(app) if already signed in
-    sign-in.tsx                 sign up / sign in form
+    sign-in.tsx                 sign up / sign in form (themed, native inputs)
   (app)/
     _layout.tsx                 protected: redirect to /sign-in if no session
     (tabs)/
-      _layout.tsx              tab bar: Home / Members / Profile
-      index.tsx                Home — welcome card + member count + quick actions
-      members.tsx              Members — list of all profiles from the database
-      profile.tsx              Profile — edit your own name and username
+      _layout.tsx               tab bar: Home / Members / Profile (blur on iOS)
+      home/
+        _layout.tsx             native Stack with large title (iOS)
+        index.tsx               Home — welcome card + member count + quick actions
+      members/
+        _layout.tsx             native Stack with large title + native search bar
+        index.tsx               Members — searchable list of all profiles
+      profile/
+        _layout.tsx             native Stack with large title
+        index.tsx               Profile — edit your own name and username
     member/
-      [id].tsx                 Member detail — view another user's profile
+      [id].tsx                  Member detail — native back button + edge swipe
 lib/
-  supabase.ts                  Supabase client (null when unconfigured)
+  supabase.ts                   Supabase client (null when unconfigured)
   api.ts                        data layer: real Supabase or local demo fallback
   auth-context.tsx              session provider (React Context) shared across routes
+  theme.ts                      light/dark palettes + ThemeContext (system colors)
+  ui.tsx                        AppPressable (ripple) + Avatar components
 supabase/schema.sql             profiles table + row-level security policies
 scripts/demo-test/              logic tests + Node stubs for storage
 runme.sh                        dev-server / test / typecheck shortcuts
@@ -233,7 +245,7 @@ This project maps almost one-to-one, with two React Native–specific difference
 | `components/`, `lib/`, `scripts/` | same | identical convention |
 | `supabase/` (SQL) | `migrations/` | schema/deploy code, same idea |
 | `assets/` | `public/` | static images/icons |
-| `App.tsx` + `index.ts` at root | `src/` entry files | Expo's toolchain expects root entry; moving to `src/` is optional |
+| `app/` directory | `src/pages/` | expo-router file-based routing — same as Next.js `app/` |
 | `app.json` | webpack/vite config | Expo's project config |
 
 The modern Expo default (expo-router) uses an `app/` directory with file-based routing — the same convention as Next.js's `app/` — so growing toward web standards is a natural step.
@@ -255,7 +267,6 @@ Standard web flow: **source → bundler → static `dist/` → host.** Ours is t
 
 ### What becomes "more standard" as the app grows
 
-- Adopt expo-router (`app/` dir, file-based routing) — aligns with Next.js
 - Add `__tests__/` folders alongside components (Jest)
 - Optionally wrap everything in `src/`
 

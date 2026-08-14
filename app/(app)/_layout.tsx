@@ -1,14 +1,16 @@
 import { Redirect, Stack } from 'expo-router';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { useAuth } from '../../lib/auth-context';
-import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import { useAppTheme } from '../../lib/theme';
 
 export default function AppLayout() {
   const { session, loading } = useAuth();
+  const { colors } = useAppTheme();
 
   if (loading) {
     return (
-      <View style={styles.loading}>
-        <ActivityIndicator color="#4f6ef7" size="large" />
+      <View style={[styles.center, { backgroundColor: colors.bg }]}>
+        <ActivityIndicator color={colors.accent} size="large" />
       </View>
     );
   }
@@ -18,11 +20,22 @@ export default function AppLayout() {
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="member/[id]" options={{ headerShown: true, headerTitle: '', headerTintColor: '#fff', headerStyle: { backgroundColor: '#0b0f1a' } }} />
+      <Stack.Screen
+        name="member/[id]"
+        options={{
+          headerShown: true,
+          headerTintColor: colors.accent,
+          headerBackButtonDisplayMode: 'minimal',
+          headerTitleStyle: { color: colors.text, fontWeight: '600' },
+          headerStyle: { backgroundColor: colors.bg },
+          headerShadowVisible: false,
+          contentStyle: { backgroundColor: colors.bg },
+        }}
+      />
     </Stack>
   );
 }
 
 const styles = StyleSheet.create({
-  loading: { flex: 1, backgroundColor: '#0b0f1a', justifyContent: 'center', alignItems: 'center' },
+  center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
 });

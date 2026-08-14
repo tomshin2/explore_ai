@@ -7,15 +7,17 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import { api } from '../../lib/api';
+import { useAppTheme } from '../../lib/theme';
+import { AppPressable } from '../../lib/ui';
 
 type Mode = 'signIn' | 'signUp';
 
 export default function SignInScreen() {
-  const [mode, setMode] = useState<Mode>('signUp');
+  const { colors } = useAppTheme();
+  const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -44,69 +46,68 @@ export default function SignInScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.bg }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <View style={styles.card}>
-        <Text style={styles.title}>explore_ai</Text>
-        <Text style={styles.subtitle}>
+      <View style={[styles.card, { backgroundColor: colors.card }]}>
+        <Text style={[styles.title, { color: colors.text }]}>explore_ai</Text>
+        <Text style={[styles.subtitle, { color: colors.textMuted }]}>
           {mode === 'signUp' ? 'Create an account' : 'Welcome back'}
         </Text>
 
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
           placeholder="Email"
-          placeholderTextColor="#5a6485"
+          placeholderTextColor={colors.textMuted}
           autoCapitalize="none"
           keyboardType="email-address"
+          autoComplete="email"
           value={email}
           onChangeText={setEmail}
         />
         <TextInput
-          style={styles.input}
+          style={[styles.input, { backgroundColor: colors.input, color: colors.text }]}
           placeholder="Password"
-          placeholderTextColor="#5a6485"
+          placeholderTextColor={colors.textMuted}
           secureTextEntry
+          autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
           value={password}
           onChangeText={setPassword}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleAuth} disabled={loading}>
+        <AppPressable
+          style={[styles.button, { backgroundColor: colors.accent }]}
+          onPress={handleAuth}
+          disabled={loading}
+        >
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.buttonText}>
+            <Text style={[styles.buttonText, { color: colors.accentText }]}>
               {mode === 'signUp' ? 'Sign up' : 'Sign in'}
             </Text>
           )}
-        </TouchableOpacity>
+        </AppPressable>
 
-        <TouchableOpacity onPress={() => setMode(mode === 'signUp' ? 'signIn' : 'signUp')}>
-          <Text style={styles.switchText}>
+        <AppPressable onPress={() => setMode(mode === 'signUp' ? 'signIn' : 'signUp')}>
+          <Text style={[styles.switchText, { color: colors.accent }]}>
             {mode === 'signUp'
               ? 'Already have an account? Sign in'
               : "Don't have an account? Sign up"}
           </Text>
-        </TouchableOpacity>
+        </AppPressable>
       </View>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0b0f1a', justifyContent: 'center', padding: 24 },
-  card: { backgroundColor: '#151b2b', borderRadius: 16, padding: 24 },
-  title: { color: '#fff', fontSize: 28, fontWeight: '800', marginBottom: 4 },
-  subtitle: { color: '#8b94ad', fontSize: 15, marginBottom: 24 },
-  input: {
-    backgroundColor: '#1f2739',
-    borderRadius: 10,
-    padding: 14,
-    color: '#fff',
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  button: { backgroundColor: '#4f6ef7', borderRadius: 10, padding: 15, alignItems: 'center', marginTop: 8 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  switchText: { color: '#8b94ad', textAlign: 'center', marginTop: 16, fontSize: 14 },
+  container: { flex: 1, justifyContent: 'center', padding: 24 },
+  card: { borderRadius: 16, padding: 24 },
+  title: { fontSize: 28, fontWeight: '800', marginBottom: 4 },
+  subtitle: { fontSize: 15, marginBottom: 24 },
+  input: { borderRadius: 10, padding: 14, fontSize: 16, marginBottom: 12 },
+  button: { borderRadius: 10, padding: 15, alignItems: 'center', marginTop: 8 },
+  buttonText: { fontSize: 16, fontWeight: '700' },
+  switchText: { textAlign: 'center', marginTop: 16, fontSize: 14, fontWeight: '500' },
 });

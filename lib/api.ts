@@ -195,7 +195,7 @@ export const api = {
       const { data } = await supabase
         .from('profiles')
         .select('id, username, full_name, updated_at')
-        .order('username' as never, { ascending: true } as never);
+        .order('username', { ascending: true });
       return (data as Profile[]) ?? [];
     }
     return demoGetProfiles();
