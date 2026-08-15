@@ -168,6 +168,19 @@ There are two Brewfiles for the Homebrew side of the toolchain:
 - **`macos/Brewfile`** — the **SDK-coupled toolchain**: Node (`node@22`), JDK 17 (`temurin@17`), CocoaPods, watchman. These are the tools Expo/RN set a *minimum* for, so they're what you review (and possibly bump) on an SDK upgrade. CocoaPods/watchman float to latest; Node and JDK are the two that may need a new major. Git is skipped, it ships with Xcode.
 - **`macos/Brewfile.gui`** — the **GUI apps**: Android Studio + Xcode. Xcode can't be installed by Homebrew itself, so it's added as a `mas` entry (`mas "Xcode", id: 497799835`) that `brew bundle` installs from the App Store — currently **commented out** since Xcode is already installed manually (uncomment it, or `mas install 497799835`, to reinstall/upgrade). Then `xcode-select --install`, open Xcode once to accept the license, and add any missing iOS simulator runtime via **Xcode → Settings → Components**.
 
+### Tool versions across environments (`macos/docker/Dockerfile` + Brewfiles)
+
+The container does dev/compile only (JS); the Mac does the native builds + preview. Only the **"Coupled"** rows must change when the Expo SDK changes — the rest are reproducibility locks or environment-specific:
+
+| Tool | Container (`macos/docker/Dockerfile`) | Mac (`macos/Brewfile*`) | SDK-coupled? |
+| --- | --- | --- | --- |
+| Node | 22.23.1 (`nodejs:22`) | `node@22` | **YES — major** |
+| npm | 10.9.8 | ships with Node | no |
+| git | 2.43.7 | Xcode CLT | no |
+| JDK 17 | n/a (no Android in container) | `temurin@17` | **YES — only if** Android compile ever moves into the container |
+| CocoaPods | n/a (iOS = Mac only) | `cocoapods` (floats) | no |
+| watchman | n/a (optional) | `watchman` (floats) | no |
+
 ### EAS cloud vs local Mac — not decided yet
 
 | | EAS cloud | Local Mac (Xcode) |
