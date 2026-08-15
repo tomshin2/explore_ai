@@ -1,0 +1,43 @@
+# explore_ai — GUI apps for building locally with native APIs (Expo SDK 54)
+#
+# This file holds the GUI apps only. SDK-coupled command-line tooling (Node,
+# JDK 17, CocoaPods, watchman) lives in macos/Brewfile.
+#
+# What this file can and cannot pin:
+#  - android-studio: Homebrew cask, always installs the LATEST stable (Quail 2
+#    / 2026.1.2 as of Aug 2026). Cask versions cannot be pinned the way formulas
+#    can; the Studio version does not affect RN 0.81 builds — the Android SDK
+#    API level below is what matters.
+#  - Xcode: App Store only (Homebrew cannot install it), but `brew bundle`
+#    supports App Store apps via the `mas` keyword below. The App Store serves
+#    a single Xcode (the latest for your macOS); older versions must be
+#    downloaded manually from developer.apple.com. SDK 54 / RN 0.81 only needs
+#    Xcode >= 16.1.
+#
+# The mas-related lines are commented out for now because Xcode was already
+# installed manually. If you ever need to reinstall/upgrade it from the CLI,
+# uncomment them (sign in to the App Store first), or use `mas install 497799835`.
+#
+# Installing:
+#   brew bundle --file macos/Brewfile.gui
+#   open -a "Android Studio"        # first-run setup below
+#
+# Android Studio first run (Settings -> SDK Manager / Device Manager):
+#   - Install the latest Android SDK Platform (the build requests an API level,
+#     typically 35 for SDK 54) + its Build-Tools; accept licenses:
+#       $HOME/Library/Android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses
+#   - Install a system image and create an AVD (choose the ARM64 image on Apple
+#     Silicon).
+#
+# Env (add to ~/.zshrc):
+#   export ANDROID_HOME="$HOME/Library/Android/sdk"
+#   export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+#
+# Checking / cleanup (same as macos/Brewfile):
+#   brew list --versions | grep -E 'android-studio'
+#   brew cleanup && brew cleanup -s && brew autoremove
+#   brew uninstall --cask android-studio   # remove if you stop using it
+
+brew "cask/android-studio"
+# brew "mas"                                   # uncomment if you need Xcode from the CLI
+# mas "Xcode", id: 497799835

@@ -44,14 +44,62 @@ If you see **"Project is incompatible with this version of Expo Go"**:
 1. Update Expo Go from the App Store / Play Store.
 2. If it still fails, the project's SDK is ahead of what your store Expo Go supports — you can either downgrade the project (below) or install a newer Expo Go build directly from `sign.expo.dev` in Safari.
 
-Upgrading the project to a newer SDK later (once store Expo Go supports it, or via a development build):
+Upgrading the project to a newer SDK later (once store Expo Go supports it, or via a development build) — the repeatable checklist:
 
-```bash
-npx expo install expo@~56.0.0   # or the latest supported
-npx expo install --fix          # realigns react, react-native, etc.
+**Container (code — Metro isn't even needed):**
+1. Read the target SDK's changelog/upgrade guide (linked from the Expo releases page) for breaking changes first — most upgrade pain is config/deprecation, not version numbers.
+2. Bump the SDK + realign dependencies:
+   ```bash
+   npx expo install expo@~56.0.0   # the new SDK (e.g. 56)
+   npx expo install --fix          # realigns react, react-native, expo-*, etc.
+   npm install
+   ```
+3. Verify compatibility: `npx expo-doctor` — flags version mismatches and config issues.
+4. Fix anything flagged, then re-run the standard gates:
+   ```bash
+   ./runme.sh typecheck && ./runme.sh test && npx expo export --platform web
+   ```
+5. Commit + push so the build machine has the new code.
+
+**Mac (toolchain — only if the new SDK demands it):**
+6. Pull the new code. Xcode → update to the version the new RN requires (manual App Store update; the first thing to check).
+7. Node → bump to the new major if the new SDK raises the minimum LTS — update the `node@22` line in `macos/Brewfile` and re-run `brew bundle`.
+8. JDK 17 → usually stays; re-check the new RN's requirement (may eventually move to 21) in `macos/Brewfile`.
+9. CocoaPods / watchman → nothing to do (they float to latest).
+
+**Where you build:**
+10. Rebuild the dev build (native dependencies changed) and reinstall — on the Mac (`npx expo run:ios`/`run:android`) if that's the chosen path, or via EAS cloud from the container. JS hot reload is unaffected after that.
+
+In practice steps 2–4 are the only code work, and `expo install --fix` + `expo-doctor` automate most of it; the rest is toolchain + a rebuild.
+
+The same flow at a glance:
+
+```
+┌─ CONTAINER (code) ─────────────────────────────────┐
+│ 1. expo install expo@~56.0.0                       │
+│ 2. expo install --fix   + npm install              │
+│ 3. expo-doctor          (fix anything it flags)    │
+│ 4. typecheck + test + web export  →  git push      │
+└─────────────────────────┬──────────────────────────┘
+                          ▼
+┌─ MAC (toolchain) ───────┴──────────────────────────┐
+│ 5. git pull                                         │
+│ 6. Xcode update   (only if the new RN demands it)   │
+│ 7. Node major / JDK 17→21  (only if the SDK does)   │
+│    → bump macos/Brewfile, re-run brew bundle        │
+│ 8. CocoaPods / watchman  (nothing — they float)     │
+└─────────────────────────┬──────────────────────────┘
+                          ▼
+┌─ BUILD ─────────────────┴──────────────────────────┐
+│ 9. npx expo run:ios  (rebuild the dev build once)  │
+└─────────────────────────┬──────────────────────────┘
+                          ▼
+                  DONE — new SDK running
 ```
 
 > Note: Expo Go is a *learning/sandbox* environment — real apps ship with **development builds** (a native binary built via EAS), which don't have this version juggling.
+
+> Note: `.env` is gitignored. The **first time you set up the Mac** (and any fresh clone), recreate it: `cp .env.example .env` and fill in the real Supabase keys, or the app builds fine but runs in DEMO MODE.
 
 ---
 
@@ -115,6 +163,10 @@ To compile and run on the Mac itself you'd install the standard iOS toolchain �
 | **Apple ID** | Simulator: not needed. Physical iPhone: free (7-day signing) or $99/yr |
 
 Then: `cd explore_ai && npm install && npx expo run:ios` (add `--device` for a physical iPhone).
+
+There are two Brewfiles for the Homebrew side of the toolchain:
+- **`macos/Brewfile`** — the **SDK-coupled toolchain**: Node (`node@22`), JDK 17 (`temurin@17`), CocoaPods, watchman. These are the tools Expo/RN set a *minimum* for, so they're what you review (and possibly bump) on an SDK upgrade. CocoaPods/watchman float to latest; Node and JDK are the two that may need a new major. Git is skipped, it ships with Xcode.
+- **`macos/Brewfile.gui`** — the **GUI apps**: Android Studio + Xcode. Xcode can't be installed by Homebrew itself, so it's added as a `mas` entry (`mas "Xcode", id: 497799835`) that `brew bundle` installs from the App Store — currently **commented out** since Xcode is already installed manually (uncomment it, or `mas install 497799835`, to reinstall/upgrade). Then `xcode-select --install`, open Xcode once to accept the license, and add any missing iOS simulator runtime via **Xcode → Settings → Components**.
 
 ### EAS cloud vs local Mac — not decided yet
 

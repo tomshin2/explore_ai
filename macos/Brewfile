@@ -1,0 +1,35 @@
+# explore_ai — build toolchain for macOS (Expo SDK 54)
+#
+# This file holds everything that is SDK-coupled — the tools Expo/RN pins a
+# minimum version of, which you may need to bump on an SDK upgrade:
+#  - node@22 (Node major): Expo raises its minimum Node LTS per SDK.
+#  - temurin@17 (JDK 17): Expo sets a minimum JDK for Android builds (17 for
+#    SDK 54; a later SDK may require 21). Installs to
+#    /Library/Java/JavaVirtualMachines — auto-discovered, no PATH entry.
+#  - cocoapods: floats to latest — Expo/RN set a *minimum*, never a maximum.
+#  - watchman: floats to latest — SDK-agnostic file watcher.
+#
+# Git is intentionally not listed: it ships with Xcode's command line tools.
+# GUI apps (Android Studio, Xcode) live in macos/Brewfile.gui.
+#
+# Installing:
+#   brew bundle --file macos/Brewfile
+#   brew bundle --file macos/Brewfile --no-upgrade   # skip `brew update`
+#
+# Checking / dumping installed versions:
+#   brew list --versions                        # show installed formulas + versions
+#   brew bundle dump --file=macos/Brewfile      # regenerate a Brewfile from what's installed
+#
+# Cleaning up:
+#   brew cleanup                                # remove old versions + stale download cache
+#   brew cleanup -s                             # also scrub all cached downloads
+#   brew autoremove                             # remove dependencies no longer needed
+#   brew uninstall <formula>                    # remove a single formula
+#
+# Note: node@22 is keg-only, so add /opt/homebrew/opt/node@22/bin to PATH
+# (Apple Silicon) or /usr/local/opt/node@22/bin (Intel).
+
+brew "node@22"
+brew "cask/temurin@17"
+brew "cocoapods"
+brew "watchman"
