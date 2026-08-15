@@ -55,6 +55,102 @@ npx expo install --fix          # realigns react, react-native, etc.
 
 ---
 
+## Development builds vs Expo Go
+
+**Expo Go** is Expo's generic sandbox app: it runs any JS-only Expo project you point at it (scan a QR / open a URL), but it only contains the native code Expo chose to ship. **Development builds** are real native binaries built *from your own project* — your app name, icon, bundle id, plus whatever native modules you add. A development build keeps the dev menu and live reload, so the workflow feels like Expo Go, just with full native power.
+
+| | Expo Go (now) | Development build (EAS) | Production build |
+| --- | --- | --- | --- |
+| What it is | Expo's sandbox app | Your app, compiled to a native binary | Same, release-mode, store-ready |
+| Native modules | Only what Expo ships | Anything you install | Same |
+| Deep links | Tunnel URL — changes every restart | Stable `exploreai://` | Same |
+| SDK version | Pinned to the store's Expo Go (SDK 54) | Per-project — no juggling | Same |
+| Dev loop | Scan QR → run | Same: connect to Metro, live reload | N/A (no dev menu) |
+
+Why it matters for this project:
+- **Stable deep links** — fixes the OAuth / email-confirmation redirect problems (see below).
+- **Native APIs** — native Apple/Google sign-in buttons, push notifications, on-device AI (iOS `FoundationModels`, Android Gemini Nano/ML Kit) — none of which Expo Go can reach.
+- **SDK upgrades** stop being blocked by Expo Go's store availability.
+
+How to get one: `npx expo run:ios` / `npx expo run:android` on a Mac / Android Studio, or cloud-build with EAS (`eas build --profile development`). A **production build** is the same project compiled in release mode — that's what gets submitted to the App Store / Play Store.
+
+### What counts as a build
+
+A **build** = one cloud (or local Xcode) compilation of the project into a native binary. **Every edit we've made so far has been 0 builds** — pure JS changes stream to a running app via Metro hot reload, no native compilation involved. Builds are only needed when the *native layer* changes:
+
+| Change | Rebuild? |
+| --- | --- |
+| Edit TS/JS, reload on the phone | No — hot reload via Metro |
+| Add a pure-JS package (axios, date-fns) | No |
+| Add a native package **already in the binary** (expo-blur, expo-linking…) | No |
+| Add a native package **not yet in the binary** (expo-apple-authentication, react-native-ml-kit…) | **Yes** — `npx expo install` warns when this is required |
+| Change icon / splash / scheme in `app.json` | **Yes** |
+
+So a dev build is a *thin client*: install it once, and day-to-day code changes reload over Metro with zero builds — you only rebuild when adding native code.
+
+### Cost & billing
+
+| Item | Cost | Notes |
+| --- | --- | --- |
+| **EAS Build, Free plan** | $0/month | 15 iOS + 15 Android builds/month, resets monthly; low-priority queue (can wait 90+ min at peak); 45-min build timeout — plenty for a solo project |
+| **Apple Developer Program** | $99/year | The only unavoidable cost — required to install your own app on a **physical iPhone** (free Apple IDs only sign for 7 days, which doesn't work with cloud builds) |
+| **Local Xcode build** | $0 | Same $99 Apple fee for physical-device installs; the only way to skip the $99 entirely is the **iOS Simulator** |
+| **Supabase** | $0 | Free tier covers a learning app |
+| **AI APIs** | $0 | Not wired up yet |
+
+There is **no "clean Mac + $0" option**: either pay $99/year to run on your real iPhone from the container, or install Xcode (~30 GB) and use the **free iOS Simulator**, which needs no Apple account at all. The simulator tests most native APIs fine; only hardware-dependent features (real Face ID, on-device Apple Intelligence models) require a physical device.
+
+### The Mac option (local Xcode build)
+
+To compile and run on the Mac itself you'd install the standard iOS toolchain — the "pollution" a container setup avoids:
+
+| Tool | Why |
+| --- | --- |
+| **Xcode** (App Store, ~30 GB) | The compiler + iOS SDK + simulators. Then `xcode-select --install`; open Xcode once to accept the license |
+| **Node.js 22** | This project runs on Node 22 (Expo 54 / RN 0.81) — `brew install node@22` or nvm |
+| **CocoaPods** | iOS dependency manager React Native uses for native packages — `brew install cocoapods` |
+| **Homebrew** | Installs the above |
+| **Watchman** (recommended) | Fast, reliable Metro file watching — `brew install watchman` |
+| **Expo CLI** | Runs the build — `npx expo run:ios` (no global install) |
+| **Apple ID** | Simulator: not needed. Physical iPhone: free (7-day signing) or $99/yr |
+
+Then: `cd explore_ai && npm install && npx expo run:ios` (add `--device` for a physical iPhone).
+
+### EAS cloud vs local Mac — not decided yet
+
+| | EAS cloud | Local Mac (Xcode) |
+| --- | --- | --- |
+| Money | $0 (free tier) | $0 (plus the same $99 for device installs) |
+| Mac pollution | None — container-only | Xcode + CocoaPods + Node + Watchman (~30 GB) |
+| Build wait | Cloud queue — up to 90+ min at peak on the Free tier | Minutes, no queue |
+| Where code lives | In the container, as now | Pulled/edited on the Mac |
+
+The choice is between a **clean Mac + patient cloud waits** (EAS) and a **polluted Mac + instant local builds** (local Xcode). Both cost the same; the deciding factor is how much the low-priority cloud queue bothers us versus how strongly we want to keep the Mac clean. **Currently leaning toward the Mac + iOS Simulator path** (no Apple fee, no queue), but not finalized — revisit when we actually need the first native build.
+
+---
+
+## Social sign-in (Google / Apple) — status & decision
+
+**How it works:** with Supabase, social login is OAuth handled server-side. User taps **"Continue with Google"** → the app opens the provider's browser flow → on approval the provider redirects back to the app with a token → Supabase exchanges it and creates/links an account + session (the same `useAuth()` session as email login).
+
+**Credentials required (set up once, in the provider + Supabase dashboards):**
+
+| Provider | Setup | Cost |
+| --- | --- | --- |
+| Google | Google Cloud Console → OAuth client (client ID + secret) → Supabase provider | Free |
+| Apple | Apple Developer Program + "Sign in with Apple" (Service ID + key) → Supabase provider | $99/year |
+| GitHub / others | Create an OAuth app → paste credentials into Supabase | Free |
+
+**Gotchas we learned:**
+1. **App Store rule 4.8:** if the app offers *any* third-party login (e.g. Google), Apple **requires** Sign in with Apple too — so Google + Apple are effectively a package once you ship.
+2. **Redirect URLs are the hard part:** OAuth needs a fixed URL that the provider sends the token back to. In Expo Go that URL is the *tunnel URL, which changes on every server restart* — so social login would keep breaking until we move to a development build with the stable `exploreai://` scheme.
+3. **Native Apple button:** `expo-apple-authentication` provides a true native "Sign in with Apple" button (no Supabase provider setup needed), but it requires a development build.
+4. **App-side code (when we add it):** `expo-auth-session` + `expo-web-browser` for the OAuth flow, Google/Apple buttons on the sign-in screen, and a callback route (e.g. `auth/callback`) that receives the redirect and completes the login.
+
+**Decision:** held off for now. Email/password + iOS Keychain autofill (via the `textContentType`/`autoComplete` attributes on the sign-in inputs) already covers the learning use case, and OAuth would be flaky inside Expo Go anyway. Plan: add Google/Apple when we move to a development build, ahead of shipping.
+
+---
+
 ## Technologies used
 
 ### Language
@@ -280,5 +376,7 @@ Standard web flow: **source → bundler → static `dist/` → host.** Ours is t
       3. Test end-to-end with a fresh signup. Shortcut while learning: keep "Confirm email" disabled in **Authentication → Sign In / Up**.
 - [x] ~~Turn the app into a real multi-screen app with expo-router (tabs + stack) once there's more than one feature.~~ — Done: Home, Members, Profile tabs + Member detail stack screen.
 - [ ] Wire a UI test framework (Jest + React Native Testing Library) as screens multiply.
-- [ ] Move the project to a development build (EAS) so SDK upgrades stop being blocked by Expo Go's store availability.
+- [ ] Move the project to a development build (EAS): unlocks SDK upgrades without Expo Go, stable `exploreai://` deep links, native modules, and on-device AI. Details in the "Development builds vs Expo Go" section above.
+- [ ] Add social sign-in (Google + Apple) once on a development build — needs Google Cloud + Apple Developer credentials (see "Social sign-in" section above).
+- [ ] Optionally add AI features (e.g. chat or auto-generated bios) via a Supabase Edge Function that holds the provider API key — never ship a key inside the app bundle. On-device NLP (iOS `NaturalLanguage`/`FoundationModels`, Android ML Kit/Gemini Nano) becomes reachable after the dev build.
 
