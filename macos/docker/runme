@@ -1,0 +1,5 @@
+# this will build an image with all the versions
+docker build --no-cache -t controlled-rocky8-dev .
+
+# next you can generate containers 
+docker run -it --name my-active-env controlled-rocky8-dev bash
