@@ -26,8 +26,19 @@
 #   brew autoremove                             # remove dependencies no longer needed
 #   brew uninstall <formula>                    # remove a single formula
 #
-# Note: node@22 is keg-only, so add /opt/homebrew/opt/node@22/bin to PATH
-# (Apple Silicon) or /usr/local/opt/node@22/bin (Intel).
+# Note: node@22 is keg-only, so /opt/homebrew/opt/node@22/bin is NOT on PATH
+# automatically (Apple Silicon; Intel: /usr/local/opt/node@22/bin).
+#
+# ~/.zprofile is the single source of truth for environment variables —
+# copy the block below in full:
+#
+#   eval "$(/opt/homebrew/bin/brew shellenv zsh)"      # Homebrew itself
+#   export PATH="/opt/homebrew/opt/node@22/bin:$PATH"  # node@22 (keg-only)
+#   export ANDROID_HOME="$HOME/Library/Android/sdk"    # Android tooling
+#   export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+#
+# Anything else that needs an env var goes there too — keep ONE file, not
+# .zshrc, so there's never a question of which one loaded.
 
 brew "node@22"
 brew "cask/temurin@17"

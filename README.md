@@ -99,7 +99,7 @@ The same flow at a glance:
 
 > Note: Expo Go is a *learning/sandbox* environment — real apps ship with **development builds** (a native binary built via EAS), which don't have this version juggling.
 
-> Note: `.env` is gitignored. The **first time you set up the Mac** (and any fresh clone), recreate it: `cp .env.example .env` and fill in the real Supabase keys, or the app builds fine but runs in DEMO MODE.
+> Note: `.env` holds real secrets and is **gitignored**. The **first time you set up the Mac** (and any fresh clone), recreate it: `cp .env.example .env` and fill in the real Supabase keys from **Supabase → Project Settings → API**, or the app builds fine but runs in DEMO MODE. Same goes for the container's dev server.
 
 ---
 

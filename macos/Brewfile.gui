@@ -29,9 +29,8 @@
 #   - Install a system image and create an AVD (choose the ARM64 image on Apple
 #     Silicon).
 #
-# Env (add to ~/.zshrc):
-#   export ANDROID_HOME="$HOME/Library/Android/sdk"
-#   export PATH="$ANDROID_HOME/emulator:$ANDROID_HOME/platform-tools:$PATH"
+# Env: ~/.zprofile is the single source — see the block at the end of
+# macos/Brewfile (ANDROID_HOME + platform-tools are already in it).
 #
 # Checking / cleanup (same as macos/Brewfile):
 #   brew list --versions | grep -E 'android-studio'
